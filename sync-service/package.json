@@ -1,0 +1,23 @@
+{
+  "name": "movies-opensearch-sync",
+  "version": "1.0.0",
+  "description": "Sync service for Movies data from PostgreSQL to OpenSearch via Debezium",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "docker:build": "docker build -t movies-sync ."
+  },
+  "dependencies": {
+    "kafkajs": "^2.2.4",
+    "@opensearch-project/opensearch": "^2.4.0",
+    "dotenv": "^16.3.1",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
