@@ -1,107 +1,149 @@
-generator client {
-  provider = "prisma-client-js"
-}
+  generator client {
+    provider = "prisma-client-js"
+  }
 
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
+  datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+  }
 
-enum ContentType {
-  MOVIE
-  TV_SHOW
-}
+  enum ContentType {
+    MOVIE
+    TV_SHOW
+  }
 
-model Movie {
-  id          String      @id @default(uuid()) @db.Uuid
-  title       String      @db.VarChar(255)
-  description String?     @db.Text
-  releaseDate DateTime    @map("release_date")
-  coverImage  String?     @map("cover_image") @db.VarChar(500)
-  type        ContentType @default(MOVIE)
+  model Movie {
+    id          String      @id @default(uuid()) @db.Uuid
+    title       String      @db.VarChar(255)
+    description String?     @db.Text
+    releaseDate DateTime    @map("release_date")
+    coverImage  String?     @map("cover_image") @db.VarChar(500)
+    type        ContentType @default(MOVIE)
 
-  cast    MovieActor[]
-  ratings Rating[]
+    cast       MovieActor[]
+    ratings    Rating[]
+    statistics MovieStatistics?
 
-  averageRating Float? @map("average_rating")
-  totalRatings  Int    @default(0) @map("total_ratings")
+    averageRating Float @default(0) @map("average_rating")
+    totalRatings  Int   @default(0) @map("total_ratings")
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@index([type, averageRating])
-  @@index([title])
-  @@map("movies")
-}
+    @@index([type, averageRating(sort: Desc)]) 
+    @@index([averageRating(sort: Desc), totalRatings(sort: Desc)]) 
+    @@index([releaseDate(sort: Desc)])
+    @@index([title])
+    @@index([createdAt(sort: Desc)])
+    @@map("movies")
+  }
 
-model Actor {
-  id    String  @id @default(uuid()) @db.Uuid
-  name  String  @db.VarChar(255)
-  bio   String? @db.Text
-  image String? @db.VarChar(500)
+  model Actor {
+    id    String  @id @default(uuid()) @db.Uuid
+    name  String  @db.VarChar(255)
+    bio   String? @db.Text
+    image String? @db.VarChar(500)
 
-  movies MovieActor[]
+    movies MovieActor[]
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@index([name])
-  @@map("actors")
-}
+    @@index([name])
+    @@map("actors")
+  }
 
-model MovieActor {
-  movieId String  @map("movie_id") @db.Uuid
-  actorId String  @map("actor_id") @db.Uuid
-  role    String? @db.VarChar(255)
+  model MovieActor {
+    movieId String  @map("movie_id") @db.Uuid
+    actorId String  @map("actor_id") @db.Uuid
+    role    String? @db.VarChar(255)
 
-  movie Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
-  actor Actor @relation(fields: [actorId], references: [id], onDelete: Cascade)
+    movie Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+    actor Actor @relation(fields: [actorId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime @default(now()) @map("created_at")
+    createdAt DateTime @default(now()) @map("created_at")
 
-  @@id([movieId, actorId])
-  @@map("movie_actors")
-}
+    @@id([movieId, actorId])
+    @@map("movie_actors")
+  }
 
-model Rating {
-  id      String @id @default(uuid()) @db.Uuid
-  movieId String @map("movie_id") @db.Uuid
-  rating  Int    @db.SmallInt
+  model Rating {
+    id      String @id @default(uuid()) @db.Uuid
+    movieId String @map("movie_id") @db.Uuid
 
-  sessionId String? @map("session_id") @db.VarChar(255)
-  ipAddress String? @map("ip_address") @db.VarChar(45)
-  userAgent String? @map("user_agent") @db.Text
+    rating  Float  @db.Real 
+    
+    sessionId String? @map("session_id") @db.VarChar(255)
+    ipAddress String? @map("ip_address") @db.VarChar(45)
+    userAgent String? @map("user_agent") @db.Text
 
-  userId String? @map("user_id") @db.Uuid
+    userId String? @map("user_id") @db.Uuid
 
-  movie Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
-  user  User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+    movie Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+    user  User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@unique([movieId, sessionId])
-  @@unique([movieId, userId])
-  @@index([movieId])
-  @@index([rating])
-  @@map("ratings")
-}
+    @@unique([movieId, sessionId], name: "unique_movie_session")
+    @@unique([movieId, userId], name: "unique_movie_user") 
+    
+    @@index([movieId, rating]) 
+    @@index([movieId, createdAt(sort: Desc)]) 
+    @@index([movieId, sessionId, createdAt])
+    @@index([movieId, ipAddress, createdAt]) 
+    @@index([sessionId, createdAt]) 
+    @@index([ipAddress, createdAt]) 
+    @@index([rating])
+    
+    @@map("ratings")
+  }
 
-model User {
-  id       String  @id @default(uuid()) @db.Uuid
-  email    String  @unique @db.VarChar(255)
-  name     String? @db.VarChar(255)
-  avatar   String? @db.VarChar(500)
-  provider String  @db.VarChar(50)
+  model User {
+    id       String  @id @default(uuid()) @db.Uuid
+    email    String  @unique @db.VarChar(255)
+    name     String? @db.VarChar(255)
+    avatar   String? @db.VarChar(500)
+    provider String  @db.VarChar(50)
 
-  providerId String @map("provider_id") @db.VarChar(255)
+    providerId String @map("provider_id") @db.VarChar(255)
 
-  ratings Rating[]
+    ratings Rating[]
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@unique([provider, providerId])
-  @@index([email])
-  @@map("users")
-}
+    @@unique([provider, providerId], name: "unique_provider_user")
+    @@index([email])
+    @@index([provider])
+    @@map("users")
+  }
+
+  model MovieStatistics {
+    id                  String @id @default(uuid()) @db.Uuid
+    movieId             String @unique @map("movie_id") @db.Uuid
+    
+    averageRating       Float @default(0) @map("average_rating")
+    totalRatings        Int   @default(0) @map("total_ratings")
+    
+    rating1Count        Int @default(0) @map("rating_1_count")
+    rating2Count        Int @default(0) @map("rating_2_count")
+    rating3Count        Int @default(0) @map("rating_3_count")
+    rating4Count        Int @default(0) @map("rating_4_count")
+    rating5Count        Int @default(0) @map("rating_5_count")
+    
+    recentRatingsCount  Int @default(0) @map("recent_ratings_count") 
+    trendingScore       Float @default(0) @map("trending_score")
+    
+    movie Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+    
+    lastCalculatedAt DateTime @default(now()) @map("last_calculated_at")
+    createdAt        DateTime @default(now()) @map("created_at")
+    updatedAt        DateTime @updatedAt @map("updated_at")
+
+    @@index([averageRating(sort: Desc), totalRatings(sort: Desc)])
+    @@index([trendingScore(sort: Desc)])
+    @@index([recentRatingsCount(sort: Desc)])
+    @@index([lastCalculatedAt])
+    @@map("movie_statistics")
+  }
