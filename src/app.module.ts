@@ -4,6 +4,7 @@ import { MovieModule } from './modules/movies/movies.module';
 import { PrismaModule } from './infrastructure/database/prisma/prisma.module';
 import { RedisModule } from '@nestjs-modules/ioredis';
 import { RatingModule } from './modules/ratings/ratings.module';
+import { SearchModule } from './modules/search/search.module';
 
 @Module({
   imports: [
@@ -16,7 +17,8 @@ import { RatingModule } from './modules/ratings/ratings.module';
     }),
     PrismaModule, 
     MovieModule,
-    RatingModule
+    RatingModule,
+    SearchModule
   ],
   controllers: [],
   providers: [],
