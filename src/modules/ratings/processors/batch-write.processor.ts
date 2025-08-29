@@ -1,8 +1,10 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "src/infrastructure/database/prisma/prisma.service";
 import type { CacheRepository } from "../repositories/cache.repository";
-import { Process, Processor } from '@nestjs/bull';
+import { InjectQueue, Process, Processor } from '@nestjs/bull';
 import type { Job } from 'bull';
+import type { Queue } from "bull";
+import { error } from "console";
 
 interface RatingToInsert {
   id: string;
@@ -24,7 +26,8 @@ export class BatchWriteProcessor {
 
   constructor(
     private readonly prisma: PrismaService,
-    @Inject('CacheRepository') private readonly cache: CacheRepository
+    @Inject('CacheRepository') private readonly cache: CacheRepository,
+    @InjectQueue('rating-stats') private readonly statsQueue: Queue
   ) {
     this.startBatchProcessor();
   }
@@ -44,6 +47,8 @@ export class BatchWriteProcessor {
       await this.persistToDatabase([validatedRating]);
       
       await this.cache.hset(`rating:${ratingId}`, 'persisted', '1');
+
+      await this.triggerStatsUpdate(validatedRating.movieId);
       
       this.logger.debug(`Rating ${ratingId} persisted to DB`);
 
@@ -101,6 +106,8 @@ export class BatchWriteProcessor {
         });
         await pipeline.exec();
 
+        await this.triggerBatchStatsUpdate(ratingsToInsert);
+
         this.logger.log(`Batch inserted ${ratingsToInsert.length} ratings`);
       } catch (error) {
         this.logger.error('Batch insert failed:', error);
@@ -143,6 +150,44 @@ export class BatchWriteProcessor {
       userAgent: rawRating.userAgent || null,
       createdAt: rawRating.timestamp ? new Date(parseInt(rawRating.timestamp)) : new Date()
     };
+  }
+
+  private async triggerStatsUpdate(movieId: string): Promise<void> {
+    try {
+      await this.statsQueue.add('update-stats', { movieId }, {
+        attempts: 2,
+        priority: 10,
+        backoff: {
+          type: 'exponential',
+          delay: 2000
+        }
+      });
+    } catch(error) {
+      this.logger.error(`Failed to queue stats update for movie ${movieId}:`, error);
+    }
+  }
+
+  private async triggerBatchStatsUpdate(ratings: RatingToInsert[]): Promise<void> {
+    try {
+      const movieIds = Array.from(new Set(ratings.map(r => r.movieId)));
+
+      const updatePromises = movieIds.map(movieId => 
+        this.statsQueue.add('update-stats', { movieId }, {
+          attempts: 2,
+          priority: 8,
+          backoff: {
+            type: 'exponential',
+            delay: 2000
+          }
+        }).catch(error => {
+          this.logger.error(`Failed to queue stats update for movie ${movieId}:`, error);
+        })
+      );
+      await Promise.allSettled(updatePromises);
+      this.logger.debug(`Queued stats updates for ${movieIds.length} movies`);
+    } catch (error) {
+      this.logger.error('Failed to queue batch stats updates:', error);
+    }
   }
 
   private async persistToDatabase(ratings: RatingToInsert[]): Promise<void> {

@@ -106,8 +106,20 @@ export class OpenSearchQueryBuilder implements QueryBuilder {
           { prefix: { title: { value: textQuery, boost: 8 } } },
           { match_phrase: { description: { query: textQuery, boost: 7 } } },
           { prefix: { description: { value: textQuery, boost: 5 } } },
-          { match_phrase: { cast: { query: textQuery, boost: 3 } } },
-          { prefix: { cast: { value: textQuery, boost: 2 } } }
+          {
+            nested: {
+              path: "cast",
+              query: {
+                bool: {
+                  should: [
+                    { match_phrase: { "cast.actorName": { query: textQuery, boost: 4 } } },
+                    { match_phrase: { "cast.role": { query: textQuery, boost: 3 } } },
+                    { prefix: { "cast.actorName": { value: textQuery, boost: 2 } } }
+                  ]
+                }
+              }
+            }
+          }
         ],
         minimum_should_match: 1
       }

@@ -1,16 +1,24 @@
 import { Injectable } from "@nestjs/common";
 import { MovieTransformer } from "../interfaces/movie-transformer.interface";
 import { CleanMovie } from "src/shared/interfaces/clean-movie.interface";
+import { ContentType } from "src/modules/movies/enums/content-type.enum";
+
+interface OpenSearchCast {
+  actorId: string;
+  actorName: string;
+  role: string;
+}
 
 interface OpenSearchMovie {
-  id: number;
+  id: string;
   title: string;
   description: string;
-  cast: string;
-  type: any;
+  cast: OpenSearchCast[];
+  type: ContentType; 
   releaseDate: string;
   averageRating: number;
   ratingCount: number;
+  coverImage?: string; 
   createdAt: string;
   updatedAt: string;
 }
@@ -29,7 +37,10 @@ export class MovieTransformerService implements MovieTransformer {
       type: source.type,
       avgRating: source.averageRating || 0,
       ratingsCount: source.ratingCount || 0,
-      casts: this.transformCast(source.cast),
+      casts: source.cast?.map((c: any) => ({
+        actor: { name: c.actorName },
+        role: c.role
+      })) || []
     };
   }
 

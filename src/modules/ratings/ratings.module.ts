@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { RedisModule } from '@nestjs-modules/ioredis';
 import { ThrottlerModule } from '@nestjs/throttler';
-
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { RatingController } from './controllers/rating.controller';
 import { HighPerformanceRatingService } from './services/high-performance-rating.service';
 import { RatingDomainService } from './services/rating.service';
@@ -13,9 +13,20 @@ import { BullQueueService } from './repositories/bull-queue.service';
 import { PrismaRatingRepository } from './repositories/prisma-rating.repository';
 import { MovieStatsSyncProcessor } from './processors/movie-stats-sync.processor';
 import { MovieStatsSchedulerService } from './scheduler/movie-stats-scheduler.service';
+import { SyncService } from 'src/sync/service/sync.service';
+import { SearchModule } from '../search/search.module';
 
 @Module({
   imports: [
+    EventEmitterModule.forRoot({
+      wildcard: true,
+      delimiter: '.',
+      newListener: false,
+      removeListener: false,
+      maxListeners: 20,
+      verboseMemoryLeak: false,
+    }),
+
     RedisModule.forRoot({
       type: 'single',
       url: `redis://${process.env.REDIS_HOST || 'localhost'}:6379`,
@@ -49,6 +60,7 @@ import { MovieStatsSchedulerService } from './scheduler/movie-stats-scheduler.se
         limit: 100,
       }
     ]),
+    SearchModule
   ],
 
   controllers: [
@@ -76,7 +88,8 @@ import { MovieStatsSchedulerService } from './scheduler/movie-stats-scheduler.se
 
     BatchWriteProcessor,
     MovieStatsSyncProcessor,
-    MovieStatsSchedulerService
+    MovieStatsSchedulerService,
+    SyncService
   ],
 
   exports: [

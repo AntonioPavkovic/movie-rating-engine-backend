@@ -134,11 +134,10 @@ export class RedisCacheRepository implements CacheRepository {
     return {
       hset: (key: string, field: string | Record<string, any>, value?: any) => {
         if (typeof field === 'string') {
-          // ✅ Ensure value is converted to string for Redis
+
           const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
           redisPipeline.hset(key, field, stringValue);
         } else {
-          // Handle object format: convert all values to strings
           const stringFields: Record<string, string> = {};
           Object.entries(field).forEach(([k, v]) => {
             stringFields[k] = typeof v === 'string' ? v : JSON.stringify(v);

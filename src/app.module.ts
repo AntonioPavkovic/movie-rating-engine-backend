@@ -5,6 +5,7 @@ import { PrismaModule } from './infrastructure/database/prisma/prisma.module';
 import { RedisModule } from '@nestjs-modules/ioredis';
 import { RatingModule } from './modules/ratings/ratings.module';
 import { SearchModule } from './modules/search/search.module';
+import { SyncModule } from './sync/sync.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { SearchModule } from './modules/search/search.module';
     PrismaModule, 
     MovieModule,
     RatingModule,
+    SyncModule,
     SearchModule
   ],
   controllers: [],

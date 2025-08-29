@@ -15,7 +15,7 @@ export class MovieService {
     private readonly logger = new Logger(MovieService.name);
     private readonly CACHE_TTL = 300; // 5 minutes
     private readonly MAX_LIMIT = 50;
-    private readonly DEFAULT_LIMIT = 10;
+
 
     constructor(
         @Inject('IMoviesRepository')

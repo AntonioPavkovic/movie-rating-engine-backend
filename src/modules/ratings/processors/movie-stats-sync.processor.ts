@@ -4,10 +4,12 @@ import type { CacheRepository } from "../repositories/cache.repository";
 import { Process, Processor } from '@nestjs/bull';
 import type { Job } from 'bull';
 import { RatingDomainService } from "../services/rating.service";
+import { SyncService } from "src/sync/service/sync.service";
+
 
 interface MovieStatsJob {
   movieId: string;
-  rating?: number; // The new rating that was added
+  rating?: number;
 }
 
 @Processor('rating-stats')
@@ -18,7 +20,8 @@ export class MovieStatsSyncProcessor {
   constructor(
     private readonly prisma: PrismaService,
     @Inject('CacheRepository') private readonly cache: CacheRepository,
-    private readonly domainService: RatingDomainService
+    private readonly domainService: RatingDomainService,
+    private readonly syncService: SyncService,
   ) {}
 
   @Process('update-stats')
@@ -27,6 +30,8 @@ export class MovieStatsSyncProcessor {
     
     try {
       await this.syncMovieStatsToDatabase(movieId);
+
+      await this.syncService.triggerRatingSync(movieId);
       this.logger.debug(`Movie stats updated for ${movieId}`);
     } catch (error) {
       this.logger.error(`Failed to update movie stats for ${movieId}:`, error);
@@ -42,6 +47,11 @@ export class MovieStatsSyncProcessor {
       await Promise.all(
         movieIds.map(movieId => this.syncMovieStatsToDatabase(movieId))
       );
+
+      await Promise.all(
+        movieIds.map(movieId => this.syncService.triggerRatingSync(movieId))
+      );
+
       this.logger.log(`Batch updated stats for ${movieIds.length} movies`);
     } catch (error) {
       this.logger.error('Batch stats update failed:', error);

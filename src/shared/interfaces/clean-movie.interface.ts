@@ -1,7 +1,7 @@
 import { ContentType } from "@prisma/client";
 
 export interface CleanMovie {
-  id: number;
+  id: string;
   title: string;
   description: string;
   coverUrl?: string;
