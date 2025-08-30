@@ -22,7 +22,7 @@ export class OpenSearchQueryBuilder implements QueryBuilder {
     const mustClauses: any[] = [];
     
     if (type) {
-      mustClauses.push({ term: { type } });
+      mustClauses.push({ match: { type } });
     }
 
     return {
@@ -102,24 +102,14 @@ export class OpenSearchQueryBuilder implements QueryBuilder {
     clauses.push({
       bool: {
         should: [
-          { match_phrase: { title: { query: textQuery, boost: 10 } } },
-          { prefix: { title: { value: textQuery, boost: 8 } } },
-          { match_phrase: { description: { query: textQuery, boost: 7 } } },
-          { prefix: { description: { value: textQuery, boost: 5 } } },
-          {
-            nested: {
-              path: "cast",
-              query: {
-                bool: {
-                  should: [
-                    { match_phrase: { "cast.actorName": { query: textQuery, boost: 4 } } },
-                    { match_phrase: { "cast.role": { query: textQuery, boost: 3 } } },
-                    { prefix: { "cast.actorName": { value: textQuery, boost: 2 } } }
-                  ]
-                }
-              }
-            }
-          }
+          { match: { title: { query: textQuery, boost: 10, fuzziness: "AUTO" } } },
+          { wildcard: { "title.keyword": { value: `*${textQuery}*`, boost: 8 } } },
+          
+          { match: { description: { query: textQuery, boost: 5 } } },
+
+          { match: { searchText: { query: textQuery, boost: 6 } } },
+          
+          { fuzzy: { title: { value: textQuery, fuzziness: "AUTO", boost: 3 } } }
         ],
         minimum_should_match: 1
       }
@@ -132,7 +122,7 @@ export class OpenSearchQueryBuilder implements QueryBuilder {
     criteria.castNames.forEach(name => {
       clauses.push({
         match: {
-          cast: {
+          searchText: {
             query: name,
             boost: 2,
             fuzziness: 'AUTO'
