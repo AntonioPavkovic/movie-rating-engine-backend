@@ -70,33 +70,28 @@ describe('MovieController', () => {
 
   describe('getTopRated', () => {
     it('should return paginated movies with default parameters', async () => {
-      // Arrange
       mockMovieService.getTopRated.mockResolvedValue(mockPaginatedResult);
 
-      // Act
       const result = await controller.getTopRated();
 
-      // Assert
       expect(result).toEqual(mockPaginatedResult);
       expect(mockMovieService.getTopRated).toHaveBeenCalledWith(
-        undefined, // type
-        { page: 1, limit: 10 }, // pagination
-        { query: undefined, minRating: undefined } // searchOptions
+        undefined,
+        { page: 1, limit: 10 },
+        { query: undefined, minRating: undefined } 
       );
     });
 
     it('should handle MOVIE type filter correctly', async () => {
-      // Arrange
+
       const movieOnlyResult = {
         ...mockPaginatedResult,
         data: mockPaginatedResult.data.filter(movie => movie.type === ContentType.MOVIE)
       };
       mockMovieService.getTopRated.mockResolvedValue(movieOnlyResult);
 
-      // Act
       const result = await controller.getTopRated(ContentType.MOVIE);
 
-      // Assert
       expect(result).toEqual(movieOnlyResult);
       expect(mockMovieService.getTopRated).toHaveBeenCalledWith(
         ContentType.MOVIE,
@@ -106,7 +101,7 @@ describe('MovieController', () => {
     });
 
     it('should handle TV_SHOW type filter correctly', async () => {
-      // Arrange
+
       const tvShowResult = {
         data: [{
           id: '650e8400-e29b-41d4-a716-446655440100',
@@ -129,10 +124,8 @@ describe('MovieController', () => {
       };
       mockMovieService.getTopRated.mockResolvedValue(tvShowResult);
 
-      // Act
       const result = await controller.getTopRated(ContentType.TV_SHOW);
 
-      // Assert
       expect(result).toEqual(tvShowResult);
       expect(mockMovieService.getTopRated).toHaveBeenCalledWith(
         ContentType.TV_SHOW,
@@ -142,13 +135,10 @@ describe('MovieController', () => {
     });
 
     it('should handle custom pagination parameters', async () => {
-      // Arrange
       mockMovieService.getTopRated.mockResolvedValue(mockPaginatedResult);
 
-      // Act
       await controller.getTopRated(undefined, 2, 20);
 
-      // Assert
       expect(mockMovieService.getTopRated).toHaveBeenCalledWith(
         undefined,
         { page: 2, limit: 20 },
@@ -157,9 +147,8 @@ describe('MovieController', () => {
     });
 
     it('should handle search query parameter', async () => {
-      // Arrange
       const searchResult = {
-        data: [mockPaginatedResult.data[0]], // Only Shawshank
+        data: [mockPaginatedResult.data[0]],
         total: 1,
         page: 1,
         totalPages: 1,
@@ -168,10 +157,8 @@ describe('MovieController', () => {
       };
       mockMovieService.getTopRated.mockResolvedValue(searchResult);
 
-      // Act
       await controller.getTopRated(undefined, 1, 10, 'shawshank');
 
-      // Assert
       expect(mockMovieService.getTopRated).toHaveBeenCalledWith(
         undefined,
         { page: 1, limit: 10 },
@@ -180,13 +167,10 @@ describe('MovieController', () => {
     });
 
     it('should handle minRating parameter', async () => {
-      // Arrange
       mockMovieService.getTopRated.mockResolvedValue(mockPaginatedResult);
 
-      // Act
       await controller.getTopRated(undefined, 1, 10, undefined, 4.0);
 
-      // Assert
       expect(mockMovieService.getTopRated).toHaveBeenCalledWith(
         undefined,
         { page: 1, limit: 10 },
@@ -195,13 +179,10 @@ describe('MovieController', () => {
     });
 
     it('should handle all parameters together', async () => {
-      // Arrange
       mockMovieService.getTopRated.mockResolvedValue(mockPaginatedResult);
 
-      // Act
       await controller.getTopRated(ContentType.MOVIE, 2, 15, 'redemption', 3.0);
 
-      // Assert
       expect(mockMovieService.getTopRated).toHaveBeenCalledWith(
         ContentType.MOVIE,
         { page: 2, limit: 15 },
@@ -210,7 +191,6 @@ describe('MovieController', () => {
     });
 
     it('should handle empty search results', async () => {
-      // Arrange
       const emptyResult = {
         data: [],
         total: 0,
@@ -221,16 +201,13 @@ describe('MovieController', () => {
       };
       mockMovieService.getTopRated.mockResolvedValue(emptyResult);
 
-      // Act
       const result = await controller.getTopRated(undefined, 1, 10, 'nonexistent');
 
-      // Assert
       expect(result).toEqual(emptyResult);
       expect(result.data).toHaveLength(0);
     });
 
     it('should handle pagination with hasNext true', async () => {
-      // Arrange
       const paginatedResult = {
         ...mockPaginatedResult,
         page: 1,
@@ -240,17 +217,14 @@ describe('MovieController', () => {
       };
       mockMovieService.getTopRated.mockResolvedValue(paginatedResult);
 
-      // Act
       const result = await controller.getTopRated(undefined, 1, 2);
 
-      // Assert
       expect(result.hasNext).toBe(true);
       expect(result.hasPrevious).toBe(false);
       expect(result.totalPages).toBe(25);
     });
 
     it('should handle middle page pagination', async () => {
-      // Arrange
       const middlePageResult = {
         ...mockPaginatedResult,
         page: 5,
@@ -260,32 +234,25 @@ describe('MovieController', () => {
       };
       mockMovieService.getTopRated.mockResolvedValue(middlePageResult);
 
-      // Act
       const result = await controller.getTopRated(undefined, 5, 2);
 
-      // Assert
       expect(result.hasNext).toBe(true);
       expect(result.hasPrevious).toBe(true);
       expect(result.page).toBe(5);
     });
 
     it('should propagate service errors', async () => {
-      // Arrange
       const serviceError = new BadRequestException('Invalid pagination parameters');
       mockMovieService.getTopRated.mockRejectedValue(serviceError);
 
-      // Act & Assert
       await expect(controller.getTopRated()).rejects.toThrow(serviceError);
     });
 
     it('should handle decimal minRating values', async () => {
-      // Arrange
       mockMovieService.getTopRated.mockResolvedValue(mockPaginatedResult);
 
-      // Act
       await controller.getTopRated(undefined, 1, 10, undefined, 3.75);
 
-      // Assert
       expect(mockMovieService.getTopRated).toHaveBeenCalledWith(
         undefined,
         { page: 1, limit: 10 },
@@ -294,13 +261,10 @@ describe('MovieController', () => {
     });
 
     it('should handle edge case with limit at maximum (50)', async () => {
-      // Arrange
       mockMovieService.getTopRated.mockResolvedValue(mockPaginatedResult);
 
-      // Act
       await controller.getTopRated(undefined, 1, 50);
 
-      // Assert
       expect(mockMovieService.getTopRated).toHaveBeenCalledWith(
         undefined,
         { page: 1, limit: 50 },

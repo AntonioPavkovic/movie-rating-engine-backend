@@ -10,7 +10,6 @@ describe('MovieService', () => {
   let mockMoviesRepository: jest.Mocked<any>;
   let mockCacheManager: jest.Mocked<Cache>;
 
-  // Mock data objects with real UUID structure matching your API
   const mockMovie = {
     id: '650e8400-e29b-41d4-a716-446655440001',
     title: 'The Shawshank Redemption',
@@ -117,7 +116,6 @@ describe('MovieService', () => {
 
   describe('getTopRated', () => {
     it('should return paginated movies successfully', async () => {
-      // Arrange
       const pagination = { page: 1, limit: 10 };
       const searchOptions = { query: 'redemption', minRating: 3.0 };
       const repositoryResult = {
@@ -129,10 +127,8 @@ describe('MovieService', () => {
       mockMoviesRepository.findTopRated.mockResolvedValue(repositoryResult);
       mockCacheManager.set.mockResolvedValue(undefined);
 
-      // Act
       const result = await service.getTopRated(ContentType.MOVIE, pagination, searchOptions);
 
-      // Assert
       expect(result).toEqual({
         data: expect.arrayContaining([
           expect.objectContaining({
@@ -144,7 +140,7 @@ describe('MovieService', () => {
         ]),
         total: 50,
         page: 1,
-        totalPages: 5, // Math.ceil(50/10)
+        totalPages: 5,
         hasNext: true,
         hasPrevious: false,
       });
@@ -165,7 +161,6 @@ describe('MovieService', () => {
     });
 
     it('should return cached result when available', async () => {
-      // Arrange
       const pagination = { page: 1, limit: 2 };
       const cachedResult = {
         data: [
@@ -186,10 +181,8 @@ describe('MovieService', () => {
 
       mockCacheManager.get.mockResolvedValue(cachedResult);
 
-      // Act
       const result = await service.getTopRated(ContentType.MOVIE, pagination);
 
-      // Assert
       expect(result).toEqual(cachedResult);
       expect(mockMoviesRepository.findTopRated).not.toHaveBeenCalled();
       expect(mockCacheManager.get).toHaveBeenCalledWith(
@@ -198,10 +191,8 @@ describe('MovieService', () => {
     });
 
     it('should validate pagination parameters', async () => {
-      // Arrange
       const invalidPagination = { page: 0, limit: 10 };
 
-      // Act & Assert
       await expect(
         service.getTopRated(ContentType.MOVIE, invalidPagination)
       ).rejects.toThrow(BadRequestException);
@@ -212,34 +203,28 @@ describe('MovieService', () => {
     });
 
     it('should validate limit is within bounds', async () => {
-      // Arrange
-      const invalidPagination = { page: 1, limit: 100 }; // MAX_LIMIT is 50
+      const invalidPagination = { page: 1, limit: 100 };
 
-      // Act & Assert
       await expect(
         service.getTopRated(ContentType.MOVIE, invalidPagination)
       ).rejects.toThrow('Limit must be between 1 and 50');
     });
 
     it('should build correct cache key with all parameters', async () => {
-      // Arrange
       const pagination = { page: 2, limit: 5 };
       const searchOptions = { query: 'breaking', minRating: 4.0 };
       
       mockCacheManager.get.mockResolvedValue(null);
       mockMoviesRepository.findTopRated.mockResolvedValue({ movies: [], total: 0 });
 
-      // Act
       await service.getTopRated(ContentType.TV_SHOW, pagination, searchOptions);
 
-      // Assert
       expect(mockCacheManager.get).toHaveBeenCalledWith(
         'top-movies:type:TV_SHOW:page:2:limit:5:query:breaking:minRating:4'
       );
     });
 
     it('should handle TV_SHOW content type', async () => {
-      // Arrange
       const pagination = { page: 1, limit: 10 };
       const tvShowData = mockMovies.filter(m => m.type === ContentType.TV_SHOW);
       const repositoryResult = { movies: tvShowData, total: 1 };
@@ -247,10 +232,8 @@ describe('MovieService', () => {
       mockCacheManager.get.mockResolvedValue(null);
       mockMoviesRepository.findTopRated.mockResolvedValue(repositoryResult);
 
-      // Act
       const result = await service.getTopRated(ContentType.TV_SHOW, pagination);
 
-      // Assert
       expect(result.data[0].type).toBe(ContentType.TV_SHOW);
       expect(mockMoviesRepository.findTopRated).toHaveBeenCalledWith({
         type: ContentType.TV_SHOW,
@@ -262,17 +245,14 @@ describe('MovieService', () => {
     });
 
     it('should handle empty search results', async () => {
-      // Arrange
       const pagination = { page: 1, limit: 10 };
       const repositoryResult = { movies: [], total: 0 };
 
       mockCacheManager.get.mockResolvedValue(null);
       mockMoviesRepository.findTopRated.mockResolvedValue(repositoryResult);
 
-      // Act
       const result = await service.getTopRated(ContentType.MOVIE, pagination);
 
-      // Assert
       expect(result).toEqual({
         data: [],
         total: 0,
@@ -284,7 +264,6 @@ describe('MovieService', () => {
     });
 
     it('should handle search with minRating filter', async () => {
-      // Arrange
       const pagination = { page: 1, limit: 10 };
       const searchOptions = { minRating: 4.0 };
       const highRatedMovies = mockMovies.filter(m => m.averageRating >= 4.0);
@@ -293,10 +272,8 @@ describe('MovieService', () => {
       mockCacheManager.get.mockResolvedValue(null);
       mockMoviesRepository.findTopRated.mockResolvedValue(repositoryResult);
 
-      // Act
       const result = await service.getTopRated(undefined, pagination, searchOptions);
 
-      // Assert
       expect(result.data).toHaveLength(1);
       expect(result.data[0].averageRating).toBeGreaterThanOrEqual(4.0);
     });
@@ -304,17 +281,14 @@ describe('MovieService', () => {
 
   describe('getMovieById', () => {
     it('should return movie when found', async () => {
-      // Arrange
       const movieId = '650e8400-e29b-41d4-a716-446655440001';
       
       mockCacheManager.get.mockResolvedValue(null);
       mockMoviesRepository.findById.mockResolvedValue(mockMovie);
       mockCacheManager.set.mockResolvedValue(undefined);
 
-      // Act
       const result = await service.getMovieById(movieId);
 
-      // Assert
       expect(result).toEqual({
         id: mockMovie.id,
         title: mockMovie.title,
@@ -338,20 +312,17 @@ describe('MovieService', () => {
     });
 
     it('should throw NotFoundException when movie not found', async () => {
-      // Arrange
       const movieId = '650e8400-e29b-41d4-a716-446655440099';
       
       mockCacheManager.get.mockResolvedValue(null);
       mockMoviesRepository.findById.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.getMovieById(movieId)).rejects.toThrow(
         new NotFoundException(`Movie with ID ${movieId} not found`)
       );
     });
 
     it('should validate movie ID', async () => {
-      // Act & Assert
       await expect(service.getMovieById('')).rejects.toThrow(
         new BadRequestException('Movie ID cannot be empty')
       );
@@ -362,7 +333,6 @@ describe('MovieService', () => {
     });
 
     it('should return cached movie when available', async () => {
-      // Arrange
       const movieId = '650e8400-e29b-41d4-a716-446655440001';
       const cachedMovie = { 
         id: movieId, 
@@ -373,25 +343,20 @@ describe('MovieService', () => {
       
       mockCacheManager.get.mockResolvedValue(cachedMovie);
 
-      // Act
       const result = await service.getMovieById(movieId);
 
-      // Assert
       expect(result).toEqual(cachedMovie);
       expect(mockMoviesRepository.findById).not.toHaveBeenCalled();
     });
 
     it('should handle cast mapping correctly', async () => {
-      // Arrange
       const movieId = '650e8400-e29b-41d4-a716-446655440001';
       
       mockCacheManager.get.mockResolvedValue(null);
       mockMoviesRepository.findById.mockResolvedValue(mockMovie);
 
-      // Act
       const result = await service.getMovieById(movieId);
 
-      // Assert
       expect(result.cast).toEqual(['Tom Hanks', 'Brad Pitt']);
       expect(result.cast).toHaveLength(2);
     });
@@ -399,17 +364,14 @@ describe('MovieService', () => {
 
   describe('cache error handling', () => {
     it('should continue operation when cache fails', async () => {
-      // Arrange
       const pagination = { page: 1, limit: 10 };
       
       mockCacheManager.get.mockRejectedValue(new Error('Cache unavailable'));
       mockMoviesRepository.findTopRated.mockResolvedValue({ movies: [], total: 0 });
       mockCacheManager.set.mockRejectedValue(new Error('Cache set failed'));
 
-      // Act
       const result = await service.getTopRated(ContentType.MOVIE, pagination);
 
-      // Assert
       expect(result).toBeDefined();
       expect(mockMoviesRepository.findTopRated).toHaveBeenCalled();
     });
@@ -417,51 +379,42 @@ describe('MovieService', () => {
 
   describe('pagination logic', () => {
     it('should calculate pagination correctly for large datasets', async () => {
-      // Arrange
       const pagination = { page: 1, limit: 2 };
       const repositoryResult = { movies: mockMovies.slice(0, 2), total: 50 };
 
       mockCacheManager.get.mockResolvedValue(null);
       mockMoviesRepository.findTopRated.mockResolvedValue(repositoryResult);
 
-      // Act
       const result = await service.getTopRated(ContentType.MOVIE, pagination);
 
-      // Assert
-      expect(result.totalPages).toBe(25); // Math.ceil(50/2)
+      expect(result.totalPages).toBe(25);
       expect(result.hasNext).toBe(true);
       expect(result.hasPrevious).toBe(false);
     });
 
     it('should handle last page correctly', async () => {
-      // Arrange
       const pagination = { page: 25, limit: 2 };
       const repositoryResult = { movies: mockMovies.slice(0, 1), total: 50 };
 
       mockCacheManager.get.mockResolvedValue(null);
       mockMoviesRepository.findTopRated.mockResolvedValue(repositoryResult);
 
-      // Act
       const result = await service.getTopRated(ContentType.MOVIE, pagination);
 
-      // Assert
       expect(result.totalPages).toBe(25);
       expect(result.hasNext).toBe(false);
       expect(result.hasPrevious).toBe(true);
     });
 
     it('should handle middle page correctly', async () => {
-      // Arrange
       const pagination = { page: 5, limit: 2 };
       const repositoryResult = { movies: mockMovies.slice(0, 2), total: 50 };
 
       mockCacheManager.get.mockResolvedValue(null);
       mockMoviesRepository.findTopRated.mockResolvedValue(repositoryResult);
 
-      // Act
       const result = await service.getTopRated(ContentType.MOVIE, pagination);
-
-      // Assert
+      
       expect(result.page).toBe(5);
       expect(result.hasNext).toBe(true);
       expect(result.hasPrevious).toBe(true);
